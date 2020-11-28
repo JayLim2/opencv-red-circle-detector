@@ -49,21 +49,30 @@ public class Camera {
                         circles,
                         Imgproc.HOUGH_GRADIENT,
                         1,
-                        (float) capturedFrameLabRed.dims() / 8,
+                        (float) capturedFrameLabRed.dims() / 16,
                         100,
                         18,
-                        5,
-                        60
+                        20,
+                        600
                 );
 
-                for (int x = 0; x < circles.cols(); x++) {
-                    double[] c = circles.get(0, x);
+                double[] c = circles.get(0, 0);
+                if (c != null) {
                     Point center = new Point(Math.round(c[0]), Math.round(c[1]));
-                    Scalar color = new Scalar(0, 255, 0);
+                    Scalar color = new Scalar(71, 220, 35);
                     int thickness = 3;
-                    // circle outline
-                    int radius = (int) Math.round(c[2]);
-                    Imgproc.circle(output, center, radius, color, thickness, 8, 0);
+                    int maxRadius = 0;
+                    for (int x = 0; x < circles.cols(); x++) {
+                        // circle outline
+                        int radius = (int) Math.round(c[2]);
+                        if (radius > maxRadius) {
+                            c = circles.get(0, x);
+                            center = new Point(Math.round(c[0]), Math.round(c[1]));
+                            color = new Scalar(71, 220, 35);
+                            maxRadius = radius;
+                        }
+                    }
+                    Imgproc.circle(output, center, maxRadius, color, thickness, 8, 0);
                 }
 
                 // image array
