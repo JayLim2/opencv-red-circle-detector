@@ -5,6 +5,9 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.Videoio;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Camera {
     public static void main(String[] args) {
         // Load Native Library
@@ -20,6 +23,10 @@ public class Camera {
             videoDevice.set(Videoio.CAP_PROP_FRAME_HEIGHT, 400);
             // Get frame from camera
             int i = 0;
+
+            List<Point> points1 = new ArrayList<Point>(1000);
+            List<Point> points2 = new ArrayList<Point>(1000);
+
             while (i++ < Integer.MAX_VALUE) {
                 Mat capturedImage = new Mat();
                 videoDevice.read(capturedImage);
@@ -73,6 +80,22 @@ public class Camera {
                         }
                     }
                     Imgproc.circle(output, center, maxRadius, color, thickness, 8, 0);
+                    Point point1 = new Point(center.x, center.y - maxRadius);
+                    Point point2 = new Point(center.x, center.y + maxRadius);
+                    points1.add(point1);
+                    points2.add(point2);
+                }
+
+                for (int j = 1; j < points1.size(); j++) {
+                    Point start = points1.get(j);
+                    Point end = points1.get(j);
+                    line(output, start, end);
+                }
+
+                for (int j = 1; j < points2.size(); j++) {
+                    Point start = points2.get(j);
+                    Point end = points2.get(j);
+                    line(output, start, end);
                 }
 
                 // image array
@@ -85,5 +108,18 @@ public class Camera {
         } else {
             System.out.println("Error.");
         }
+    }
+
+    private static void line(Mat img, Point start, Point end) {
+        int thickness = 10;
+        int lineType = 8;
+        int shift = 0;
+        Imgproc.line(img,
+                start,
+                end,
+                new Scalar(0, 242, 255),
+                thickness,
+                lineType,
+                shift);
     }
 }
