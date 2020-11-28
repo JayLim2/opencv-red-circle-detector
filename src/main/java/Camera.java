@@ -88,13 +88,13 @@ public class Camera {
 
                 for (int j = 1; j < points1.size(); j++) {
                     Point start = points1.get(j);
-                    Point end = points1.get(j);
+                    Point end = points1.get(j - 1);
                     line(output, start, end);
                 }
 
                 for (int j = 1; j < points2.size(); j++) {
                     Point start = points2.get(j);
-                    Point end = points2.get(j);
+                    Point end = points2.get(j - 1);
                     line(output, start, end);
                 }
 
@@ -111,7 +111,7 @@ public class Camera {
     }
 
     private static void line(Mat img, Point start, Point end) {
-        int thickness = 10;
+        int thickness = 3;
         int lineType = 8;
         int shift = 0;
         Imgproc.line(img,
