@@ -91,7 +91,7 @@ public class Camera {
                 double[] c = circles.get(0, 0);
                 if (c != null) {
                     Point center = new Point(Math.round(c[0]), Math.round(c[1]));
-                    Scalar color = RGBColor.PURPLE.scalar;
+                    Scalar color = RGBColor.GREEN.scalar;
                     int thickness = 3;
                     int maxRadius = 0;
                     for (int x = 0; x < circles.cols(); x++) {
@@ -100,7 +100,7 @@ public class Camera {
                         if (radius > maxRadius) {
                             c = circles.get(0, x);
                             center = new Point(Math.round(c[0]), Math.round(c[1]));
-                            color = RGBColor.PURPLE.scalar;
+                            color = RGBColor.GREEN.scalar;
                             maxRadius = radius;
                         }
                     }
