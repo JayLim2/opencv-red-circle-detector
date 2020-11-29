@@ -9,6 +9,31 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Camera {
+
+    private enum HSVColor {
+        RED_1(20, 150, 150),
+        RED_2(190, 255, 255);
+
+        private Scalar scalar;
+
+        HSVColor(double hue, double saturation, double value) {
+            this.scalar = new Scalar(hue, saturation, value);
+        }
+    }
+
+    private enum RGBColor {
+        RED(255, 0, 0),
+        GREEN(0, 255, 0),
+        YELLOW(255, 242, 0),
+        PURPLE(202, 0, 202);
+
+        private Scalar scalar;
+
+        RGBColor(double red, double green, double blue) {
+            this.scalar = new Scalar(blue, green, red);
+        }
+    }
+
     public static void main(String[] args) {
         // Load Native Library
         OpenCV.loadShared();
@@ -41,8 +66,8 @@ public class Camera {
                 Imgproc.cvtColor(capturedFrameBgr, capturedFrameLab, Imgproc.COLOR_BGR2Lab);
 
                 Mat capturedFrameLabRed = new Mat();
-                Scalar scalar1 = new Scalar(20, 150, 150);
-                Scalar scalar2 = new Scalar(190, 255, 255);
+                Scalar scalar1 = HSVColor.RED_1.scalar;
+                Scalar scalar2 = HSVColor.RED_2.scalar;
                 Core.inRange(capturedFrameLab, scalar1, scalar2, capturedFrameLabRed);
                 Size size = new Size(5, 5);
                 Imgproc.GaussianBlur(
@@ -56,7 +81,7 @@ public class Camera {
                         circles,
                         Imgproc.HOUGH_GRADIENT,
                         1,
-                        (float) capturedFrameLabRed.dims() / 16,
+                        (float) capturedFrameLabRed.dims() / 8,
                         100,
                         18,
                         20,
@@ -66,7 +91,7 @@ public class Camera {
                 double[] c = circles.get(0, 0);
                 if (c != null) {
                     Point center = new Point(Math.round(c[0]), Math.round(c[1]));
-                    Scalar color = new Scalar(71, 220, 35);
+                    Scalar color = RGBColor.PURPLE.scalar;
                     int thickness = 3;
                     int maxRadius = 0;
                     for (int x = 0; x < circles.cols(); x++) {
@@ -75,7 +100,7 @@ public class Camera {
                         if (radius > maxRadius) {
                             c = circles.get(0, x);
                             center = new Point(Math.round(c[0]), Math.round(c[1]));
-                            color = new Scalar(71, 220, 35);
+                            color = RGBColor.PURPLE.scalar;
                             maxRadius = radius;
                         }
                     }
@@ -117,7 +142,7 @@ public class Camera {
         Imgproc.line(img,
                 start,
                 end,
-                new Scalar(0, 242, 255),
+                RGBColor.YELLOW.scalar,
                 thickness,
                 lineType,
                 shift);
