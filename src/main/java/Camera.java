@@ -126,22 +126,51 @@ public class Camera {
                     float[] rad = new float[1];
                     MatOfPoint2f contour = new MatOfPoint2f(maxContour.toArray());
                     Imgproc.minEnclosingCircle(contour, center, rad);
-                    if (false) {
-                        Imgproc.circle(output, center, (int) rad[0], RGBColor.GREEN.scalar, 3);
-                        points.add(center);
+                    Rect rect = Imgproc.boundingRect(maxContour);
+                    if (true) {
+                        float rd = (int) (0.9 * rad[0]);
+                        double circleArea = (float)Math.PI * rd * rd;
+                        double rectArea = rect.width * rect.height;
+                        double contourArea = Imgproc.contourArea(contour);
+                        System.out.printf("%.2f %.2f %n", circleArea, contourArea);
+                        int percent = 10;
+                        boolean isCircle = Math.abs(circleArea - contourArea) > Math.abs(rectArea - contourArea);
+                        if (!isCircle) {
+                            Imgproc.circle(output, center, (int) rad[0], RGBColor.GREEN.scalar, 3);
+                            points.add(center);
+                        }
                     } else {
                         double epsilon = Imgproc.arcLength(contour, true);
                         MatOfPoint2f approximatedContour = new MatOfPoint2f();
                         Imgproc.approxPolyDP(contour, approximatedContour, 0.001 * epsilon, true);
-                        System.out.println(approximatedContour.toList().size());
+//                        System.out.println(approximatedContour.toList().size());
                         if (approximatedContour.toList().size() > 5) {
-                            if (false) {
+                            if (true) {
                                 List<MatOfPoint> approximated = new ArrayList<MatOfPoint>();
                                 MatOfPoint appCtr = new MatOfPoint();
                                 approximatedContour.convertTo(appCtr, CvType.CV_32S);
                                 approximated.add(appCtr);
                                 points.add(center);
-                                Imgproc.drawContours(output, approximated, 0, RGBColor.GREEN.scalar, 5);
+
+                                float rd = (int) (0.9 * rad[0]);
+
+                                double circleArea = (float)Math.PI * rd * rd;
+                                double contourArea = Imgproc.contourArea(approximatedContour);
+
+                                System.out.printf("%.2f %.2f %n", circleArea, contourArea);
+
+                                int percent = 15;
+                                boolean over = 100 * circleArea / contourArea > 100 + percent;
+
+                                if(!over) {
+                                    Imgproc.drawContours(
+                                            output,
+                                            approximated,
+                                            0,
+                                            RGBColor.GREEN.scalar,
+                                            5
+                                    );
+                                }
                             } else {
                                 center = new Point();
                                 rad = new float[1];
