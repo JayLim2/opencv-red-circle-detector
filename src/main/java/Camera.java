@@ -6,13 +6,17 @@ import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.Videoio;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Camera {
 
     private enum HSVColor {
-        RED_1(20, 150, 150),
-        RED_2(190, 255, 255);
+        LOWER_RED_1(0, 100, 100),
+        UPPER_RED_1(10, 255, 255),
+
+        LOWER_RED_2(160, 100, 100),
+        UPPER_RED_2(180, 255, 255);
 
         private Scalar scalar;
 
@@ -49,79 +53,119 @@ public class Camera {
             // Get frame from camera
             int i = 0;
 
-            List<Point> points1 = new ArrayList<Point>(1000);
-            List<Point> points2 = new ArrayList<Point>(1000);
+            List<Point> points = new ArrayList<Point>(1000);
 
             while (i++ < Integer.MAX_VALUE) {
-                Mat capturedImage = new Mat();
-                videoDevice.read(capturedImage);
+                Mat capturedFrame = new Mat();
+                videoDevice.read(capturedFrame);
 
-                Mat output = capturedImage.clone();
+                Mat output = capturedFrame.clone();
 
                 Mat capturedFrameBgr = new Mat();
-                Imgproc.cvtColor(capturedImage, capturedFrameBgr, Imgproc.COLOR_BGRA2BGR);
+                Imgproc.cvtColor(capturedFrame, capturedFrameBgr, Imgproc.COLOR_BGRA2BGR);
                 Imgproc.medianBlur(capturedFrameBgr, capturedFrameBgr, 3);
+//                Size size = new Size(5, 5);
+//                Imgproc.GaussianBlur(
+//                        capturedFrameBgr, capturedFrameBgr,
+//                        size, 2, 2
+//                );
 
-                Mat capturedFrameLab = new Mat();
-                Imgproc.cvtColor(capturedFrameBgr, capturedFrameLab, Imgproc.COLOR_BGR2Lab);
+                //hsv, linear blur, контуры, трек по центрам и чистить его
 
-                Mat capturedFrameLabRed = new Mat();
-                Scalar scalar1 = HSVColor.RED_1.scalar;
-                Scalar scalar2 = HSVColor.RED_2.scalar;
-                Core.inRange(capturedFrameLab, scalar1, scalar2, capturedFrameLabRed);
-                Size size = new Size(5, 5);
-                Imgproc.GaussianBlur(
-                        capturedFrameLabRed, capturedFrameLabRed,
-                        size, 2, 2
-                );
+                Mat capturedFrameHSV = new Mat();
+                Imgproc.cvtColor(capturedFrameBgr, capturedFrameHSV, Imgproc.COLOR_BGR2HSV);
 
-                Mat circles = new Mat();
-                Imgproc.HoughCircles(
-                        capturedFrameLabRed,
-                        circles,
-                        Imgproc.HOUGH_GRADIENT,
+                Mat capturedFrameHSVRed1 = new Mat();
+                Mat capturedFrameHSVRed2 = new Mat();
+                Mat capturedFrameHSVRed = new Mat();
+                Core.inRange(capturedFrameHSV, HSVColor.LOWER_RED_1.scalar, HSVColor.UPPER_RED_1.scalar, capturedFrameHSVRed1);
+                Core.inRange(capturedFrameHSV, HSVColor.LOWER_RED_2.scalar, HSVColor.UPPER_RED_2.scalar, capturedFrameHSVRed2);
+                Core.addWeighted(
+                        capturedFrameHSVRed1,
                         1,
-                        (float) capturedFrameLabRed.dims() / 8,
-                        100,
-                        18,
-                        20,
-                        600
+                        capturedFrameHSVRed2,
+                        1,
+                        0,
+                        capturedFrameHSVRed
+                );
+//                Size size = new Size(5, 5);
+//                Imgproc.GaussianBlur(
+//                        capturedFrameHSVRed, capturedFrameHSVRed,
+//                        size, 2, 2
+//                );
+
+                List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+                Mat hier = new Mat();
+                Imgproc.findContours(
+                        capturedFrameHSVRed,
+                        contours,
+                        hier,
+                        Imgproc.RETR_TREE,
+                        Imgproc.CHAIN_APPROX_SIMPLE
                 );
 
-                double[] c = circles.get(0, 0);
-                if (c != null) {
-                    Point center = new Point(Math.round(c[0]), Math.round(c[1]));
-                    Scalar color = RGBColor.GREEN.scalar;
-                    int thickness = 3;
-                    int maxRadius = 0;
-                    for (int x = 0; x < circles.cols(); x++) {
-                        // circle outline
-                        int radius = (int) Math.round(c[2]);
-                        if (radius > maxRadius) {
-                            c = circles.get(0, x);
-                            center = new Point(Math.round(c[0]), Math.round(c[1]));
-                            color = RGBColor.GREEN.scalar;
-                            maxRadius = radius;
-                        }
+//                for (MatOfPoint contour : contours) {
+//                    System.out.println(contour);
+//                }
+//                System.out.println();
+
+                double maxVal = 0;
+                int maxValIdx = 0;
+                for (int contourIdx = 0; contourIdx < contours.size(); contourIdx++) {
+                    double contourArea = Imgproc.contourArea(contours.get(contourIdx));
+                    if (maxVal < contourArea) {
+                        maxVal = contourArea;
+                        maxValIdx = contourIdx;
                     }
-                    Imgproc.circle(output, center, maxRadius, color, thickness, 8, 0);
-                    Point point1 = new Point(center.x, center.y - maxRadius);
-                    Point point2 = new Point(center.x, center.y + maxRadius);
-                    points1.add(point1);
-                    points2.add(point2);
                 }
 
-                for (int j = 1; j < points1.size(); j++) {
-                    Point start = points1.get(j);
-                    Point end = points1.get(j - 1);
-                    line(output, start, end);
+                if (contours.size() > 0) {
+                    MatOfPoint maxContour = contours.get(maxValIdx);
+
+                    Point center = new Point();
+                    float[] rad = new float[1];
+                    MatOfPoint2f contour = new MatOfPoint2f(maxContour.toArray());
+                    Imgproc.minEnclosingCircle(contour, center, rad);
+                    if (false) {
+                        Imgproc.circle(output, center, (int) rad[0], RGBColor.GREEN.scalar, 3);
+                        points.add(center);
+                    } else {
+                        double epsilon = Imgproc.arcLength(contour, true);
+                        MatOfPoint2f approximatedContour = new MatOfPoint2f();
+                        Imgproc.approxPolyDP(contour, approximatedContour, 0.001 * epsilon, true);
+                        System.out.println(approximatedContour.toList().size());
+                        if (approximatedContour.toList().size() > 5) {
+                            if (false) {
+                                List<MatOfPoint> approximated = new ArrayList<MatOfPoint>();
+                                MatOfPoint appCtr = new MatOfPoint();
+                                approximatedContour.convertTo(appCtr, CvType.CV_32S);
+                                approximated.add(appCtr);
+                                points.add(center);
+                                Imgproc.drawContours(output, approximated, 0, RGBColor.GREEN.scalar, 5);
+                            } else {
+                                center = new Point();
+                                rad = new float[1];
+                                contour = approximatedContour;
+                                Imgproc.minEnclosingCircle(contour, center, rad);
+                                Imgproc.circle(output, center, (int) (0.9 * rad[0]), RGBColor.GREEN.scalar, 3);
+                                points.add(center);
+                            }
+                        }
+
+//                        Imgproc.drawContours(output, contours, maxValIdx, RGBColor.GREEN.scalar, 5);
+                    }
                 }
 
-                for (int j = 1; j < points2.size(); j++) {
-                    Point start = points2.get(j);
-                    Point end = points2.get(j - 1);
+//                Mat edges = new Mat();
+//                Imgproc.Canny(capturedFrameHSVRed, edges, 1000, 1000);
+//                HighGui.imshow("test222", edges);
+
+                for (int j = 1; j < points.size(); j++) {
+                    Point start = points.get(j);
+                    Point end = points.get(j - 1);
                     line(output, start, end);
                 }
+                forget(points);
 
                 // image array
                 HighGui.imshow("test", output);
@@ -132,6 +176,22 @@ public class Camera {
             videoDevice.release();
         } else {
             System.out.println("Error.");
+        }
+    }
+
+    private static MatOfPoint to(MatOfPoint2f matOfPoint2f) {
+        MatOfPoint point = new MatOfPoint();
+        point.convertTo(matOfPoint2f, CvType.CV_32S);
+        return point;
+    }
+
+    private static MatOfPoint2f to2f(MatOfPoint matOfPoint) {
+        return new MatOfPoint2f(matOfPoint.toArray());
+    }
+
+    private static void forget(List<Point> points) {
+        if (points.size() > 50) {
+            points.remove(0);
         }
     }
 
