@@ -2,12 +2,10 @@ import nu.pattern.OpenCV;
 import org.opencv.core.*;
 import org.opencv.highgui.HighGui;
 import org.opencv.imgproc.Imgproc;
-import org.opencv.imgproc.Moments;
 import org.opencv.videoio.VideoCapture;
-import org.opencv.videoio.Videoio;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class MyCamera {
@@ -110,24 +108,29 @@ public class MyCamera {
                         capturedFrameHSVRed,
                         contours,
                         hierarchy,
-                        Imgproc.RETR_TREE,
+                        Imgproc.RETR_EXTERNAL,
                         Imgproc.CHAIN_APPROX_SIMPLE
                 );
 
                 int width = capturedFrame.width();
                 int height = capturedFrame.height();
 
-                Mat contourMat = new Mat(height, width, CvType.CV_8UC3);
+                Mat contourMat = new Mat(height, width, CvType.CV_8UC4);
+                contourMat = Mat.zeros(capturedFrame.size(), CvType.CV_8UC3);
                 Imgproc.drawContours(
                         contourMat,
                         contours,
                         -1,
-                        new Scalar(255, 255, 255),
-                        2,
-                        Imgproc.LINE_AA,
-                        hierarchy,
-                        1
+                        new Scalar(255, 255, 255)
                 );
+
+                for (MatOfPoint contour: contours) {
+                    Imgproc.fillPoly(
+                            contourMat,
+                            Collections.singletonList(contour),
+                            new Scalar(255, 255, 255)
+                    );
+                }
 
                 Mat gray = new Mat();
                 Imgproc.cvtColor(contourMat, gray, Imgproc.COLOR_BGR2GRAY);
@@ -141,9 +144,9 @@ public class MyCamera {
                         Imgproc.HOUGH_GRADIENT,
                         1,
                         500,
-                        300,
-                        20,
-                        60,
+                        100,
+                        13,
+                        30,
                         160
                 );
 
